@@ -9,3 +9,10 @@ output "dynamodb_table_name" {
   value       = aws_dynamodb_table.remote_state_lock_table.name
 
 }
+
+
+output "aws_availability_zones" {
+  description = "List of available AWS availability zones."
+  value       = data.aws_availability_zones.available.names
+
+}
