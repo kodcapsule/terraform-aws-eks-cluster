@@ -76,7 +76,7 @@ resource "random_string" "suffix" {
 data "aws_availability_zones" "available" {}
 
 locals {
-  cluster_name = "${var.project_name}-eks-${random_string.suffix.result}"
+  cluster_name = "${var.project_name}"
   vpc_name     = "${var.project_name}-vpc-${random_string.suffix.result}"
 
 }
@@ -127,14 +127,14 @@ module "vpc" {
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
   version         = "20.8.4"
-  cluster_name    = var.project_name
+  cluster_name    = local.cluster_name
   cluster_version = var.kubernetes_version
   subnet_ids      = module.vpc.private_subnets
 
   enable_irsa = true
 
   tags = {
-    cluster = var.project_name
+    cluster = local.cluster_name
   }
 
   vpc_id = module.vpc.vpc_id

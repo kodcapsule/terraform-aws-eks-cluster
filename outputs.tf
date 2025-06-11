@@ -1,18 +1,36 @@
-output "s3_bucket_name" {
-  description = "The name of the S3 bucket created for storing Terraform state."
-  value       = aws_s3_bucket.remote_state_bucket.bucket
+
+output "vpc_id" {
+  description = "The ID of the VPC created."
+  value       = module.vpc.vpc_id
 
 }
 
-output "dynamodb_table_name" {
-  description = "The name of the DynamoDB table created for Terraform state locking."
-  value       = aws_dynamodb_table.remote_state_lock_table.name
+output "cluster_id" {
+  description = "The ID of the EKS cluster created."
+  value       = module.eks.cluster_id
+  
+}
+
+output "cluster_arn" {
+  description = "The ARN of the EKS cluster created."
+  value       = module.eks.cluster_arn
 
 }
 
+output "cluster_endpoint" {
+  description = "The endpoint of the EKS cluster."
+  value       = module.eks.cluster_endpoint
+  
+}
 
-output "aws_availability_zones" {
-  description = "List of available AWS availability zones."
-  value       = data.aws_availability_zones.available.names
+output "cluster_security_group_id" {
+  description = "The security group ID of the EKS cluster."
+  value       = module.eks.cluster_security_group_id
+  
+}
 
+output "kubectl_config" {
+  description = "The kubeconfig for the EKS cluster."
+  value       = module.eks.kubeconfig
+  
 }

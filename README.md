@@ -22,11 +22,13 @@ This project is not begineer friendly so before you begin, ensure you have:
    - CloudWatch logs management
 
 
-## Architecture Overview
+## Project Architecture and Components 
+![AWS EKS cluster](./images/eks-cluster-achitecture.gif)
 
-The Terraform configuration creates:
+### AWS Components
+The Terraform configuration creates the following AWS resources:
 
-- **VPC with Multi-AZ Setup**: Custom VPC with public and private subnets across 2 availability zones
+- **VPC with Multi-AZ Setup**: Custom VPC with public and private subnets across 4 availability zones
 - **EKS Cluster**: Fully managed Kubernetes control plane with CloudWatch logging
 - **Managed Node Group**: Auto-scaling worker nodes in private subnets
 - **Networking**: Internet Gateway, NAT Gateways, and route tables for secure connectivity
@@ -188,22 +190,38 @@ kubectl get nodes
 | Variable | Description | Default | Type |
 |----------|-------------|---------|------|
 | `aws_region` | AWS region for deployment | `us-west-2` | string |
-| `cluster_name` | Name of the EKS cluster | `my-eks-cluster` | string |
-| `cluster_version` | Kubernetes version | `1.28` | string |
-| `node_instance_types` | EC2 instance types for nodes | `["t3.medium"]` | list(string) |
+| `profile_name` | The AWS profile name to use for authentication | `default` | string |
+| `project_name` | Name of the project | `aws-eks-terraform-project` | string |
+| `kubernetes_version` | Kubernetes version | `1.27` | string |
+| `vpc_cidr` | The CIDR block for the VPC| `10.0.0.0/16` | string |
+| `node_instance_types` | EC2 instance types for nodes | `["t3.medium", "t3.large"]` | list(string) |
 | `node_desired_size` | Desired number of worker nodes | `2` | number |
-| `node_max_size` | Maximum number of worker nodes | `4` | number |
+| `node_max_size` | Maximum number of worker nodes | `6` | number |
 | `node_min_size` | Minimum number of worker nodes | `1` | number |
 
 ## Outputs
 
-After successful deployment, Terraform provides these outputs:
+After successful deployment , you should get these outputs:
 
 - `cluster_id`: EKS cluster identifier
+- `vpc_id`: The customer managed VPC id
 - `cluster_arn`: EKS cluster ARN
 - `cluster_endpoint`: Kubernetes API endpoint
 - `cluster_security_group_id`: Security group ID for the cluster
 - `kubectl_config`: Configuration details for kubectl setup
+
+## Verify Deployment
+
+```bash
+# Check cluster status
+kubectl get nodes
+
+# View cluster info
+kubectl cluster-info
+
+# Check system pods
+kubectl get pods -n kube-system
+```
 
 ## Post-Deployment Setup
 
@@ -227,21 +245,11 @@ After successful deployment, Terraform provides these outputs:
    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
    ```
 
-### Verify Deployment
 
-```bash
-# Check cluster status
-kubectl get nodes
 
-# View cluster info
-kubectl cluster-info
+## Security and Cost Optimization Considerations
 
-# Check system pods
-kubectl get pods -n kube-system
-```
-
-## Security Considerations
-
+### Security 
 This configuration implements several security best practices:
 
 - **Private Worker Nodes**: All worker nodes are deployed in private subnets
@@ -250,7 +258,7 @@ This configuration implements several security best practices:
 - **Encrypted Communication**: All traffic between components is encrypted
 - **CloudWatch Logging**: Comprehensive audit logging enabled
 
-## Cost Optimization
+### Cost Optimization
 
 To optimize costs:
 
@@ -315,9 +323,7 @@ terraform apply
 4. Test thoroughly
 5. Submit a pull request
 
-## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
