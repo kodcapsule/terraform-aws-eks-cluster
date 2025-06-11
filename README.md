@@ -1,6 +1,26 @@
 # AWS EKS Terraform Module - Production-Ready Kubernetes Cluster Infrastructure as Code
 
-This repository contains Terraform infrastructure as code (IaC) to deploy a production-ready Amazon Elastic Kubernetes Service (EKS) cluster on AWS.
+This project is a  production-ready Amazon Elastic Kubernetes Service (EKS) cluster on AWS  that was deployed using  Terraform, the widely used  (IaC) tool in cloud.This hands-on project 
+
+## Prerequisites
+
+This project is not begineer friendly so before you begin, ensure you have:
+
+1. **AWS CLI** installed and configured AWS with appropriate credentials  
+- Download from [Installing or updating to the latest version of the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+2. **Terraform** Make sure you have terraform installed with version >= 1.0
+   - Download from [Install Terraform](https://developer.hashicorp.com/terraform/install)
+
+3. **kubectl** installed kubectl for cluster management from the official Kubernetes page
+   - Download from [Install Tools](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+
+4. **AWS IAM Permissions** - Ensure your  AWS credentials have  permissions to perform these acctions:
+   - EKS cluster creation and management
+   - EC2 instance and VPC management
+   - IAM role creation and policy attachment
+   - CloudWatch logs management
+
 
 ## Architecture Overview
 
@@ -13,54 +33,132 @@ The Terraform configuration creates:
 - **Security**: Security groups with least-privilege access
 - **IAM**: Service roles with required permissions for EKS cluster and worker nodes
 
-## Prerequisites
 
-Before you begin, ensure you have:
+## Executing the project
 
-1. **AWS CLI** installed and configured with appropriate credentials
-   ```bash
-      aws configure
-   ```
-
-2. **Terraform** installed (version >= 1.0)
-   - Download from [terraform.io](https://www.terraform.io/downloads.html)
-
-3. **kubectl** installed for cluster management
-   - Download from [kubernetes.io](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-
-4. **AWS IAM Permissions** - Your AWS credentials need permissions for:
-   - EKS cluster creation and management
-   - EC2 instance and VPC management
-   - IAM role creation and policy attachment
-   - CloudWatch logs management
-
-## Quick Start
-
-### 1. Clone and Initialize
+### 1. Clone and Initialize the project
+First clone the project and initialze it to install all the necessory plugins,
 
 ```bash
 # Clone the repository (or download the files)
-git clone <your-repo-url>
-cd aws-eks-terraform
-
-# Initialize Terraform
+git clone https://github.com/kodcapsule/terraform-aws-eks-cluster.git
+cd terraform-aws-eks-cluster
 terraform init
 ```
 
 ### 2. Configure Variables (Optional)
 
-Create a `terraform.tfvars` file to customize your deployment:
+You can create a `terraform.tfvars` file to customize your deployment,this is optional.
 
+Example of a terraform.tfvars
 ```hcl
 # terraform.tfvars
 cluster_name         = "my-production-cluster"
 aws_region          = "us-east-1"
-cluster_version     = "1.28"
+cluster_version     = "1.27"
 node_instance_types = ["t3.large"]
 node_desired_size   = 3
 node_max_size       = 6
 node_min_size       = 2
 ```
+
+
+### 3. Create Remote backend Using S3 and DynamoDB
+
+Create an S3 bucket and a DynamoDB table to manage your state. The S3 will store the `terraform.tfstate`file and the dynamoDb will be used for state locking. This is the standard practice in companies deploying production workloads. To ensure your credentials are not exposed  used terraform [Partial configuration](https://developer.hashicorp.com/terraform/language/backend). 
+
+**Step 1 Create S3 to Store State**
+```hcl
+resource "aws_s3_bucket" "remote_state_bucket" {
+  bucket = "${var.project_name}-state-bucket-101"
+
+  tags = {
+    Name        = "${var.project_name}-terraform-state"
+    Environment = var.project_name
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+
+}
+
+resource "aws_s3_bucket_versioning" "remote_state_versioning" {
+  bucket = aws_s3_bucket.remote_state_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "dfault_encryption" {
+  bucket = aws_s3_bucket.remote_state_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+
+}
+
+resource "aws_s3_bucket_public_access_block" "name" {
+  bucket                  = aws_s3_bucket.remote_state_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+}
+```
+**Step 2 Create DynamoDB for State locking**
+
+```hcl
+   resource "aws_dynamodb_table" "remote_state_lock_table" {
+  name         = "${var.project_name}-state-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-terraform-state-lock"
+    Environment = var.project_name
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+}
+```
+
+**3 Deploy Remote Backend  Infrastructure**
+
+```bash
+
+terraform fmt
+
+
+terraform validate
+
+# Review the planned changes
+terraform plan
+# Apply the configuration
+terraform apply
+```
+**4 Configure  Remote Backend**
+
+```bash
+   terraform init -backend-config="./state.config"
+```
+
+
 
 ### 3. Deploy the Infrastructure
 
@@ -72,7 +170,7 @@ terraform plan
 terraform apply
 ```
 
-The deployment typically takes 10-15 minutes to complete.
+The deployment typically takes between 10-15 minutes to complete.
 
 ### 4. Configure kubectl
 

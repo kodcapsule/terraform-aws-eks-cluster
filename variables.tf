@@ -28,6 +28,6 @@ variable "region" {
 variable "profile" {
   description = "The profiles for AWS"
   type        = string
-  default     = "wewoli"
+  default     = "my-profile"
 
 }
